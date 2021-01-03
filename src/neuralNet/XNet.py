@@ -32,8 +32,11 @@ class XNet(pl.LightningModule):
             nn.Conv2d(8, 3, kernel_size=6, padding=1),
         )
 
-    def forward(self, x):
-        return self.CNNLayerY(x)
+    def forward(self, inputs):
+        # x_patch, y_patch = inputs
+        # y_transformed = self.CNNLayerY(x_patch)
+        # x_transformed = self.CNNLayerX(y_patch)
+        pass
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.learning_rate)
