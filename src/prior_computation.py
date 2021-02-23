@@ -1,13 +1,19 @@
 from scipy.io import loadmat
 from skimage.util import view_as_blocks, view_as_windows
-from patchify import patchify, unpatchify
 import numpy as np
 import torch
-import tensorflow as tf
+
+
+# import tensorflow as tf
 
 
 def load_mat_file(path='resources/Flood_UiT_HCD_California_2017_Luppino.mat'):
-    mat = loadmat(path)
+    try:
+        mat = loadmat(path)
+    except FileNotFoundError as e:
+        print(e)
+        return None
+
     roi = mat['ROI']
     t1_image = mat['t1_L8_clipped']
     t2_image = mat['logt2_clipped']
@@ -27,7 +33,7 @@ def compute_affinity_matrix(batch_patches: torch.tensor) -> torch.tensor:
     """
     Function that computes the affinity matrix for every patch in a batch
     :param batch_patches: tensor with shape (batch_size, patch_width, patch_height, no_of_channels)
-    :return:
+    :return affinity_matrix: torch.tensor containing the affinity Matrix for every patch in the batch
     """
     _, h, w, c = batch_patches.shape
     x1: torch.tensor = batch_patches.reshape(-1, h * w, c).unsqueeze(1)
@@ -45,22 +51,13 @@ def compute_affinity_matrix(batch_patches: torch.tensor) -> torch.tensor:
     return affinity_matrix
 
 
-def alpha(x, y):
-    """
-    Compute the alpha prior starting from corresponding patches of data organized
-    in batches. It first computes the affinity matrices of the two batches and then
-    it computes the mean over the rows of the element-wise difference between the
-    affinity matrices.
-        Input:
-            x - float, array of [batch_size, patch_size, patch_size, num_channels_x],
-                Batch of patches from data domain x.
-            y - float, array of [batch_size, patch_size, patch_size, num_channels_y],
-                Batch of patches from data domain y.
-        Output:
-            alpha - float, array of [batch_size, patch_size, patch_size], prior
-    """
-    Ax = compute_affinity_matrix(x)
-    Ay = compute_affinity_matrix(y)
-    ps = int(Ax.shape[1] ** (0.5))
-    alpha = tf.reshape(tf.reduce_mean(tf.abs(Ax - Ay), axis=-1), [-1, ps, ps])
-    return alpha
+def alpha_prior(x_batch, y_batch):
+    #TODO: alpha for overlapping patches
+    Ax = compute_affinity_matrix(x_batch)
+    Ay = compute_affinity_matrix(y_batch)
+    ps = int(Ax.shape[1] ** 0.5)
+    D_absolute = torch.abs(Ax - Ay)
+    alpha_prior: torch.tensor = torch.mean(D_absolute, -1)
+    alpha_prior = torch.reshape(alpha_prior, [-1, ps, ps])
+    # alpha = tf.reshape(tf.reduce_mean(tf.abs(Ax - Ay), axis=-1), [-1, ps, ps])
+    return alpha_prior
