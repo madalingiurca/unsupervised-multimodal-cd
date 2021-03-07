@@ -49,13 +49,13 @@ class NeuralNetwork(pl.LightningModule):
         )
 
         self.discriminator = nn.Sequential(
-            nn.Conv2d(20, 64, kernel_size=3),
+            nn.Conv2d(20, 64, kernel_size=2),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(64, 32, kernel_size=3),
+            nn.Conv2d(64, 32, kernel_size=2),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(32, 16, kernel_size=3),
+            nn.Conv2d(32, 16, kernel_size=2),
             nn.Flatten(),
-            nn.Linear(1600, 1),
+            nn.Linear(1936, 1),
             torch.nn.Sigmoid()
         )
 
@@ -71,19 +71,52 @@ class NeuralNetwork(pl.LightningModule):
         return x_hat, y_hat
 
     # TODO: custom loss function
-    # set automatic_optimization=False in Trainer
+    # set automatic_optimization=False in Trainer if iterable optimizers doesnt work
+    # this implies explicit care of backpropagation, zero_grad, etc
     # https://pytorch-lightning.readthedocs.io/en/stable/optimizers.html
+    # noinspection DuplicatedCode
     def training_step(self, test_batch, batch_idx, optimizer_idx):
         x, y, prior_information = test_batch
         x = x.permute(0, 3, 1, 2)
         y = y.permute(0, 3, 1, 2)
-
+        # optimizer 0, optimize with respect to AE params based on returned loss
         if optimizer_idx == 0:
-            pass
+            x_hat = self.Qz(self.Py(y))
+            y_hat = self.Sz(self.Rx(x))
+            x_tilda = self.Qz(self.Rx(x))
+            y_tilda = self.Qz(self.Rx(x))
+            x_cycled = self.Qz(self.Py(y_hat))
+            y_cycled = self.Sz(self.Rx(x_hat))
+
+            cycle_loss = self.mse_loss(x, x_cycled, y, y_cycled)
+            prior_loss = self.prior_loss(x, x_hat, y, y_hat, (1 - prior_information))
+            recon_loss = self.mse_loss(x, x_tilda, y, y_tilda)
+
+            return cycle_loss + prior_loss + recon_loss
+        # optimizer 1, optimize with respect to the Discriminator params
         if optimizer_idx == 1:
-            pass
-        # if optimizer_idx == 2:
-        #     pass
+            x_disc_code = self.Rx(x)
+            x_disc_code = self.discriminator(x_disc_code)
+            # x_disc_code = self.discriminator(self.Rx(x))
+            y_disc_code = self.discriminator(self.Py(y))
+            ones = torch.ones_like(x_disc_code)
+
+            # TODO: check if correct pg8 - ARXIV
+            x_part = torch.sum((x_disc_code - ones) ** 2) / torch.numel(x_disc_code)
+            y_part = torch.sum(y_disc_code ** 2) / torch.numel(y_disc_code)
+
+            return x_part + y_part
+        # optimizer 2, optimize with respect to both encoders params, generator part opposite to optimizer 1
+        if optimizer_idx == 2:
+            x_disc_code = self.discriminator(self.Rx(x))
+            y_disc_code = self.discriminator(self.Py(y))
+            ones = torch.ones_like(x_disc_code)
+
+            # TODO: check if correct pg8 - ARXIV
+            x_part = torch.sum(x_disc_code ** 2) / torch.numel(x_disc_code)
+            y_part = torch.sum((y_disc_code - ones) ** 2) / torch.numel(y_disc_code)
+
+            return x_part + y_part
 
     def validation_step(self, batch, batch_idx):
         pass
@@ -95,8 +128,26 @@ class NeuralNetwork(pl.LightningModule):
         encoders_params = list(self.Rx.parameters()) + list(self.Py.parameters())
         decoders_params = list(self.Sz.parameters()) + list(self.Qz.parameters())
 
-        optimizer_AE = torch.optim.Adam(encoders_params + decoders_params, lr=self.learning_rate)
-        # optimizer_E = torch.optim.Adam(encoders_params, lr=self.learning_rate)
+        optimizer_ae = torch.optim.Adam(encoders_params + decoders_params, lr=self.learning_rate)
+        optimizer_e = torch.optim.Adam(encoders_params, lr=self.learning_rate)
         optimizer_disc = torch.optim.Adam(self.discriminator.parameters(), lr=self.learning_rate)
-        # return [optimizer_AE, optimizer_disc, optimizer_E]
-        return [optimizer_AE, optimizer_disc]
+        # return [optimizer_ae, optimizer_disc, optimizer_E]
+        return [optimizer_ae, optimizer_disc, optimizer_e]
+
+    @staticmethod
+    def mse_loss(x, x_mod, y, y_mod):
+        x_mse = torch.sum((torch.linalg.norm(x_mod - x, dim=1) ** 2)) / (torch.numel(x))
+        y_mse = torch.sum((torch.linalg.norm(y_mod - y, dim=1) ** 2)) / (torch.numel(y))
+
+        return x_mse + y_mse
+
+    @staticmethod
+    def prior_loss(x, x_hat, y, y_hat, weights):
+        a = torch.linalg.norm(y_hat - y, dim=1) ** 2
+        a = a ** 2
+        a = a * weights
+        a = torch.sum(a) / torch.numel(a)
+        x_weighted_mse = torch.sum((torch.linalg.norm(x_hat - x, dim=1) ** 2) * weights) / (torch.numel(x))
+        y_weighted_mse = torch.sum((torch.linalg.norm(y_hat - y, dim=1) ** 2) * weights) / (torch.numel(y))
+
+        return y_weighted_mse + x_weighted_mse

@@ -5,11 +5,12 @@ from patchify import patchify, unpatchify
 import torch
 
 if __name__ == '__main__':
-    patch_size = 10
-    window_step = 4
+    patch_size = 20
+    window_step = 10
     batch_size = 5
 
-    roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(path=r'Flood_UiT_HCD_California_2017_Luppino.mat')
+    roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(
+        path=r'C:\Users\mgiur\PycharmProjects\UnsupervisedMultimodalCD\Flood_UiT_HCD_California_2017_Luppino.mat')
     # t1_patches: torch.tensor = prior_computation.patching_image(t1_landsat, patch_size, window_step).to(cuda)
     # t1_patches = torch.reshape(t1_patches, (-1, patch_size, patch_size, 11))
     # t2_patches: torch.tensor = prior_computation.patching_image(t2_sentinel, patch_size, window_step).to(cuda)
@@ -24,7 +25,8 @@ if __name__ == '__main__':
     t2_patches = torch.tensor(np.reshape(t2_patches, (-1, patch_size, patch_size, 3)))
 
     neuralNetwork = NeuralNetwork()
-    inputs = (t1_patches[0], t2_patches[0], torch.randn(patch_size, patch_size).unsqueeze(2))
-    x_hat, y_hat = neuralNetwork.training_step(inputs, 0, 0)
-    # print(x_hat), exit()
-    x_hat = x_hat.detach().to_numpy()[0]
+
+    inputs = (t1_patches[0].unsqueeze(0), t2_patches[0].unsqueeze(0), torch.randn(patch_size, patch_size).unsqueeze(0))
+    loss = neuralNetwork.training_step(inputs, 0, 2)
+
+
