@@ -1,7 +1,7 @@
 import numpy as np
 from src.neuralNet.NeuralNet import NeuralNetwork
-from src import prior_computation
-from patchify import patchify, unpatchify
+from src.utils import prior_computation
+from patchify import patchify
 import torch
 
 if __name__ == '__main__':

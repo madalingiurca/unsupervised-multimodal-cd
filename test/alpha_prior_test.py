@@ -3,19 +3,18 @@ import torch
 from torchvision.utils import save_image
 from tqdm import trange
 from patchify import unpatchify, patchify
-from matplotlib import pyplot as plt
 
-from src import prior_computation
+from src.utils import prior_computation
 
 if __name__ == '__main__':
     cuda = torch.device('cuda')
 
     patch_size = 10
-    window_step = 4
+    window_step = 10
     batch_size = 5
 
-    roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(path=r'D:\UnsupervisedMultimodalCD\resources'
-                                                                        r'\Flood_UiT_HCD_California_2017_Luppino.mat')
+    roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(
+        path=r'resources/Flood_UiT_HCD_California_2017_Luppino.mat')
     # t1_patches: torch.tensor = prior_computation.patching_image(t1_landsat, patch_size, window_step).to(cuda)
     # t1_patches = torch.reshape(t1_patches, (-1, patch_size, patch_size, 11))
     # t2_patches: torch.tensor = prior_computation.patching_image(t2_sentinel, patch_size, window_step).to(cuda)

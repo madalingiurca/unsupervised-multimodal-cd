@@ -1,7 +1,7 @@
 import numpy as np
 from src.neuralNet.NeuralNet import NeuralNetwork
-from src import prior_computation
-from patchify import patchify, unpatchify
+from src.utils import prior_computation
+from patchify import patchify
 import torch
 
 if __name__ == '__main__':
@@ -9,8 +9,7 @@ if __name__ == '__main__':
     window_step = 10
     batch_size = 5
 
-    roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(
-        path=r'C:\Users\mgiur\PycharmProjects\UnsupervisedMultimodalCD\Flood_UiT_HCD_California_2017_Luppino.mat')
+    roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file()
     # t1_patches: torch.tensor = prior_computation.patching_image(t1_landsat, patch_size, window_step).to(cuda)
     # t1_patches = torch.reshape(t1_patches, (-1, patch_size, patch_size, 11))
     # t2_patches: torch.tensor = prior_computation.patching_image(t2_sentinel, patch_size, window_step).to(cuda)

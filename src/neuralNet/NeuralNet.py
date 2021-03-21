@@ -60,6 +60,7 @@ class NeuralNetwork(pl.LightningModule):
         )
 
     def forward(self, inputs):
+        # TODO: Compute the absolute difference between traslated images
         x, y = inputs
         x = x.permute(0, 3, 1, 2)
         y = y.permute(0, 3, 1, 2)
@@ -70,7 +71,6 @@ class NeuralNetwork(pl.LightningModule):
 
         return x_hat, y_hat
 
-    # TODO: custom loss function
     # set automatic_optimization=False in Trainer if iterable optimizers doesnt work
     # this implies explicit care of backpropagation, zero_grad, etc
     # https://pytorch-lightning.readthedocs.io/en/stable/optimizers.html
@@ -84,14 +84,14 @@ class NeuralNetwork(pl.LightningModule):
             x_hat = self.Qz(self.Py(y))
             y_hat = self.Sz(self.Rx(x))
             x_tilda = self.Qz(self.Rx(x))
-            y_tilda = self.Qz(self.Rx(x))
+            y_tilda = self.Sz(self.Py(y))
             x_cycled = self.Qz(self.Py(y_hat))
             y_cycled = self.Sz(self.Rx(x_hat))
 
             cycle_loss = self.mse_loss(x, x_cycled, y, y_cycled)
             prior_loss = self.prior_loss(x, x_hat, y, y_hat, (1 - prior_information))
             recon_loss = self.mse_loss(x, x_tilda, y, y_tilda)
-
+            # TODO weights for losses
             return cycle_loss + prior_loss + recon_loss
         # optimizer 1, optimize with respect to the Discriminator params
         if optimizer_idx == 1:
@@ -101,7 +101,7 @@ class NeuralNetwork(pl.LightningModule):
             y_disc_code = self.discriminator(self.Py(y))
             ones = torch.ones_like(x_disc_code)
 
-            # TODO: check if correct pg8 - ARXIV
+            # TODO: check if correct pg8 - ARXIV unit tests*
             x_part = torch.sum((x_disc_code - ones) ** 2) / torch.numel(x_disc_code)
             y_part = torch.sum(y_disc_code ** 2) / torch.numel(y_disc_code)
 
@@ -112,7 +112,7 @@ class NeuralNetwork(pl.LightningModule):
             y_disc_code = self.discriminator(self.Py(y))
             ones = torch.ones_like(x_disc_code)
 
-            # TODO: check if correct pg8 - ARXIV
+            # TODO: check if correct pg8 - ARXIV unit tests
             x_part = torch.sum(x_disc_code ** 2) / torch.numel(x_disc_code)
             y_part = torch.sum((y_disc_code - ones) ** 2) / torch.numel(y_disc_code)
 
