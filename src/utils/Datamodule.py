@@ -6,9 +6,9 @@ from patchify import patchify
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
 
-from src.neuralNet.hyperparams import BATCH_SIZE
-from src.utils import prior_computation
-from src.utils.Dataset import CaliforniaFloodDataset
+from neuralNet.hyperparams import BATCH_SIZE
+from utils import prior_computation
+from utils.Dataset import CaliforniaFloodDataset
 
 
 class CaliforniaFloodDataModule(LightningDataModule):
@@ -23,7 +23,19 @@ class CaliforniaFloodDataModule(LightningDataModule):
         self.data = {}
 
     def prepare_data(self, *args, **kwargs):
-        roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(path=self.data_path)
+        try:
+            roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(path=self.data_path)
+        except FileNotFoundError:
+            from google_drive_downloader import GoogleDriveDownloader as gdd
+            import zipfile
+
+            gdd.download_file_from_google_drive(file_id='1PWyoQS3ogKTs9kkA7ySpGkvHxvn7mRZb',
+                                                dest_path=r'./resources/Flood_UiT_HCD_California_2017_Luppino.zip')
+            with zipfile.ZipFile(r"./resources/Flood_UiT_HCD_California_2017_Luppino.zip", "r") as zip_ref:
+                zip_ref.extractall(r'./resources')
+
+            roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(path=self.data_path)
+
         self.data['landsat'] = np.reshape(
             patchify(t1_landsat, (self.patch_size, self.patch_size, 11), self.window_step),
             (-1, self.patch_size, self.patch_size, 11))

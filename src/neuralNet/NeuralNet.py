@@ -4,7 +4,7 @@ import pytorch_lightning as pl
 import torch
 from torch import nn
 
-import src.neuralNet.hyperparams as hp
+import neuralNet.hyperparams as hp
 
 
 class NeuralNetwork(pl.LightningModule):

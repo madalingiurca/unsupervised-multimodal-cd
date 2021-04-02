@@ -10,11 +10,7 @@ from tqdm import trange
 
 
 def load_mat_file(path='resources/Flood_UiT_HCD_California_2017_Luppino.mat'):
-    try:
-        mat = loadmat(path)
-    except FileNotFoundError as e:
-        print(e)
-        return None
+    mat = loadmat(path)
 
     roi = mat['ROI']
     t1_image = mat['t1_L8_clipped']

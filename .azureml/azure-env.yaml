@@ -1,0 +1,12 @@
+name: azure-env
+channels:
+    - conda-forge
+dependencies:
+    - python
+    - pip:
+          - torch
+          - torchvision
+          - patchify
+          - pytorch-lightning
+          - scikit-image
+          - opencv-python
