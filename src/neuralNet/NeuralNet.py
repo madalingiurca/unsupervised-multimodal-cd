@@ -4,13 +4,14 @@ import pytorch_lightning as pl
 import torch
 from torch import nn
 
+import src.neuralNet.hyperparams as hp
+
 
 class NeuralNetwork(pl.LightningModule):
 
     def __init__(self):
         super().__init__()
-        self.learning_rate = 5e-4
-        self.batch_size = None
+        self.learning_rate = hp.LEARNING_RATE
         # TODO: Add dropout layers
         # [batch_size, h, w, no_channels_landsat] -> A
 
@@ -91,8 +92,15 @@ class NeuralNetwork(pl.LightningModule):
             cycle_loss = self.mse_loss(x, x_cycled, y, y_cycled)
             prior_loss = self.prior_loss(x, x_hat, y, y_hat, (1 - prior_information))
             recon_loss = self.mse_loss(x, x_tilda, y, y_tilda)
-            # TODO weights for losses
-            return cycle_loss + prior_loss + recon_loss
+            # TODO: recheck regularisation term | norma params ^ 2?
+            self.log('Cycle Loss', cycle_loss)
+            self.log('Prior Loss', prior_loss)
+            self.log('Reconstruction Loss', recon_loss)
+
+            total_loss = hp.W_CYCLE * cycle_loss + hp.W_HAT * prior_loss + hp.W_RECON * recon_loss
+            self.log('Non-discriminator total loss', total_loss)
+
+            return total_loss
         # optimizer 1, optimize with respect to the Discriminator params
         if optimizer_idx == 1:
             x_disc_code = self.Rx(x)
@@ -104,8 +112,11 @@ class NeuralNetwork(pl.LightningModule):
             # TODO: check if correct pg8 - ARXIV unit tests*
             x_part = torch.sum((x_disc_code - ones) ** 2) / torch.numel(x_disc_code)
             y_part = torch.sum(y_disc_code ** 2) / torch.numel(y_disc_code)
+            disc_loss = hp.W_D * (x_part + y_part)
 
-            return x_part + y_part
+            self.log("Discrimator loss", disc_loss)
+
+            return hp.W_D * (x_part + y_part)
         # optimizer 2, optimize with respect to both encoders params, generator part opposite to optimizer 1
         if optimizer_idx == 2:
             x_disc_code = self.discriminator(self.Rx(x))
@@ -115,8 +126,10 @@ class NeuralNetwork(pl.LightningModule):
             # TODO: check if correct pg8 - ARXIV unit tests
             x_part = torch.sum(x_disc_code ** 2) / torch.numel(x_disc_code)
             y_part = torch.sum((y_disc_code - ones) ** 2) / torch.numel(y_disc_code)
+            code_loss = hp.W_D * (x_part + y_part)
 
-            return x_part + y_part
+            self.log("Code loss", code_loss)
+            return hp.W_D * (x_part + y_part)
 
     def validation_step(self, batch, batch_idx):
         pass

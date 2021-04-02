@@ -1,9 +1,9 @@
-from matplotlib import pyplot as plt
-import torch
-import prior_computation
 import numpy as np
-from sklearn.feature_extraction.image import reconstruct_from_patches_2d
+import torch
+from matplotlib import pyplot as plt
 from patchify import unpatchify, patchify
+
+from src.utils import prior_computation
 
 if __name__ == '__main__':
     # TODO #Ask_about Patch size and window_step
@@ -30,8 +30,6 @@ if __name__ == '__main__':
 
     t2_patches = patchify(t2_sentinel, (10, 10, 3), 10)
     t2_patches = torch.tensor(np.reshape(t2_patches, (-1, 10, 10, 3))).to(cuda)
-
-
 
     t2_patches = t2_patches.detach().numpy().astype(np.float32)
     t2_image = np.reshape(t2_patches, (350, 200, 1, 10, 10, 3))

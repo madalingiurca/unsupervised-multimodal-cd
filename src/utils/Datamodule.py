@@ -1,18 +1,19 @@
 import os
-import numpy as np
-import cv2
 
+import cv2
+import numpy as np
 from patchify import patchify
 from pytorch_lightning import LightningDataModule
 from torch.utils.data import DataLoader
-from src.utils.Dataset import CaliforniaFloodDataset
 
+from src.neuralNet.hyperparams import BATCH_SIZE
 from src.utils import prior_computation
+from src.utils.Dataset import CaliforniaFloodDataset
 
 
 class CaliforniaFloodDataModule(LightningDataModule):
     def __init__(self, data_path="resources/Flood_UiT_HCD_California_2017_Luppino.mat",
-                 batch_size=64, patch_size=20, window_step=10):
+                 batch_size=BATCH_SIZE, patch_size=20, window_step=10):
         super().__init__()
         self.trainDataset = None
         self.batch_size = batch_size

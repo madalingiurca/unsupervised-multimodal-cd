@@ -1,7 +1,4 @@
 from torch.utils.data import Dataset
-from torch import tensor
-
-import numpy as np
 
 
 class CaliforniaFloodDataset(Dataset):
