@@ -4,9 +4,10 @@ channels:
 dependencies:
     - python
     - pip:
-          - torch
-          - torchvision
-          - patchify
-          - pytorch-lightning
-          - scikit-image
-          - opencv-python
+      - torch
+      - torchvision
+      - patchify
+      - pytorch-lightning
+      - scikit-image
+      - opencv-python-headless
+      - googledrivedownloader
