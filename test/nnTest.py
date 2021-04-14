@@ -1,5 +1,5 @@
 import numpy as np
-from src.neuralNet.NeuralNet import NeuralNetwork
+from src.neuralNetwork.ace_net import AceNet
 from src.utils import prior_computation
 from patchify import patchify
 import torch
@@ -23,7 +23,7 @@ if __name__ == '__main__':
     t2_patched_size = t2_patches.shape
     t2_patches = torch.tensor(np.reshape(t2_patches, (-1, patch_size, patch_size, 3)))
 
-    neuralNetwork = NeuralNetwork()
+    neuralNetwork = AceNet()
     inputs = (t1_patches[0], t2_patches[0], torch.randn(patch_size, patch_size).unsqueeze(2))
     x_hat, y_hat = neuralNetwork.training_step(inputs, 0, 0)
     # print(x_hat), exit()

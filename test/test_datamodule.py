@@ -1,4 +1,4 @@
-from src.utils.Datamodule import CaliforniaFloodDataModule
+from src.utils.CaliforniaFloodDataModule import CaliforniaFloodDataModule
 from torch.utils.data import DataLoader
 
 if __name__ == '__main__':
