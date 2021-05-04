@@ -1,19 +1,16 @@
 import os
 
-import cv2
-import numpy as np
-from patchify import patchify
 from pytorch_lightning import LightningDataModule
+from scipy.io import loadmat
 from torch.utils.data import DataLoader
 
-from src.neuralNetwork.hyperparams import BATCH_SIZE
 from src.utils import prior_computation
 from src.utils.Dataset import CaliforniaFloodDataset
 
 
 class CaliforniaFloodDataModule(LightningDataModule):
     def __init__(self, data_path="resources/Flood_UiT_HCD_California_2017_Luppino.mat",
-                 batch_size=BATCH_SIZE, patch_size=20, window_step=10):
+                 batch_size=16, patch_size=20, window_step=10):
         super().__init__()
         self.trainDataset = None
         self.batch_size = batch_size
@@ -28,28 +25,21 @@ class CaliforniaFloodDataModule(LightningDataModule):
             prior_computation.save_priorinfo_image(patch_size=self.patch_size, window_step=self.window_step)
 
     def setup(self, stage=None):
-        roi, t1_landsat, t2_sentinel = prior_computation.load_mat_file(path=self.data_path)
+        matFile = loadmat(self.data_path)
         data = dict()
 
-        data['landsat'] = np.reshape(
-            patchify(t1_landsat, (self.patch_size, self.patch_size, 11), self.window_step),
-            (-1, self.patch_size, self.patch_size, 11))
+        data['landsat'] = matFile['t1_L8_clipped'].view()
+        data['landsat'] = data['landsat'].reshape((-1, self.patch_size, self.patch_size, 11))
+        data['sentinel'] = matFile['logt2_clipped'].view()
+        data['sentinel'] = data['sentinel'].view().reshape((-1, self.patch_size, self.patch_size, 3))
 
-        data['sentinel'] = np.reshape(
-            patchify(t2_sentinel, (self.patch_size, self.patch_size, 3), self.window_step),
-            (-1, self.patch_size, self.patch_size, 3))
-
-        prior_information_image = cv2.imread(r'C:\Users\mgiur\PycharmProjects\UnsupervisedMultimodalCD\resources\avg.png', cv2.IMREAD_GRAYSCALE)
+        prior_information_image = loadmat(r'resources/alpha_prior_test.mat')['prior']
         prior_information_image = prior_information_image / prior_information_image.max()
-        # self.data['prior_info'] = patchify(prior_information_image,
-        #                                    (self.patch_size, self.patch_size), self.window_step)
 
-        data['prior_info'] = np.reshape(
-            patchify(prior_information_image, (self.patch_size, self.patch_size), self.window_step),
-            (-1, self.patch_size, self.patch_size)
-        )
+        data['prior_info'] = prior_information_image.view()
+        data['prior_info'] = data['prior_info'].view().reshape((-1, self.patch_size, self.patch_size))
 
         self.trainDataset = CaliforniaFloodDataset(data)
 
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
-        return DataLoader(self.trainDataset, batch_size=self.batch_size)
+        return DataLoader(self.trainDataset, batch_size=self.batch_size, shuffle=True)

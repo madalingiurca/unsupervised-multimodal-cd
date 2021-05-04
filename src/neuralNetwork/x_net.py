@@ -18,30 +18,30 @@ class XNet(pl.LightningModule):
         # TODO: Add dropout layers
         # [batch_size, h, w, no_channels_landsat] -> A
 
-        self.Rx = nn.Sequential(
-            nn.Conv2d(11, 100, kernel_size=3),
+        self.Fx = nn.Sequential(
+            nn.Conv2d(11, 100, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(100, 50, kernel_size=3),
+            nn.Conv2d(100, 50, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(50, 20, kernel_size=3),
+            nn.Conv2d(50, 20, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(20, 3, kernel_size=3, padding=(4, 4))
+            nn.Conv2d(20, 3, kernel_size=(3, 3), padding=(4, 4))
         )
 
-        self.Py = nn.Sequential(
-            nn.Conv2d(3, 100, kernel_size=3),
+        self.Gy = nn.Sequential(
+            nn.Conv2d(3, 100, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(100, 50, kernel_size=3),
+            nn.Conv2d(100, 50, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(50, 20, kernel_size=3),
+            nn.Conv2d(50, 20, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.Conv2d(20, 11, kernel_size=3, padding=(4, 4))
+            nn.Conv2d(20, 11, kernel_size=(3, 3), padding=(4, 4))
         )
 
     def forward(self, input):
         x, y = input
-        x_trans = self.Rx(x)
-        y_trans = self.Py(y)
+        y_trans = self.Fx(x)
+        x_trans = self.Gy(y)
 
         return x_trans, y_trans
 
@@ -50,20 +50,24 @@ class XNet(pl.LightningModule):
         x = x.permute(0, 3, 1, 2)
         y = y.permute(0, 3, 1, 2)
 
-        x_trans, y_trans = self((x, y))
+        x_hat, y_hat = self((x, y))
 
-        x_cycled = self.Py(y_trans)
-        y_cycled = self.Rx(x_trans)
+        x_cycled = self.Gy(y_hat)
+        y_cycled = self.Fx(x_hat)
 
-        prior_loss = self.mse_loss_weighted(x, x_trans, 1 - prior_information) + \
-                     self.mse_loss_weighted(y, y_trans, 1 - prior_information)
+        prior_loss = self.mse_loss_weighted(x, x_hat, 1 - prior_information) + \
+                     self.mse_loss_weighted(y, y_hat, 1 - prior_information)
 
+        self.log("x_loss", self.mse_loss_weighted(x, x_hat, 1 - prior_information))
+        self.log("y_loss", self.mse_loss_weighted(y, y_hat, 1 - prior_information))
+        self.log("prior loss", prior_loss)
         cycle_loss = mse_loss(x, x_cycled) + mse_loss(y, y_cycled)
-
+        self.log("cycle loss", cycle_loss)
         total_loss = hp.W_HAT * prior_loss + hp.W_CYCLE * cycle_loss
         self.log("total loss", total_loss)
 
         return hp.W_HAT * prior_loss + hp.W_CYCLE * cycle_loss
+        # return hp.W_HAT * prior_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), weight_decay=hp.W_REG)

@@ -5,7 +5,7 @@ from src.neuralNetwork.ace_net import AceNet
 from utils.CaliforniaFloodDataModule import CaliforniaFloodDataModule
 
 if __name__ == '__main__':
-    datamodule = CaliforniaFloodDataModule()
+    datamodule = CaliforniaFloodDataModule(patch_size=100, window_step=100, batch_size=8)
     model = AceNet()
 
     trainer = Trainer(gpus=1, max_epochs=10,
