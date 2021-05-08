@@ -35,19 +35,19 @@ class AceNet(pl.LightningModule):
         )
 
         self.Sz = nn.Sequential(
-            nn.ConvTranspose2d(20, 100, kernel_size=(3, 3)),
+            nn.ConvTranspose2d(20, 50, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.ConvTranspose2d(100, 200, kernel_size=(3, 3)),
+            nn.ConvTranspose2d(50, 100, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.ConvTranspose2d(200, 3, kernel_size=(3, 3)),
+            nn.ConvTranspose2d(100, 3, kernel_size=(3, 3)),
         )
 
         self.Qz = nn.Sequential(
-            nn.ConvTranspose2d(20, 100, kernel_size=(3, 3)),
+            nn.ConvTranspose2d(20, 50, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.ConvTranspose2d(100, 200, kernel_size=(3, 3)),
+            nn.ConvTranspose2d(50, 100, kernel_size=(3, 3)),
             nn.LeakyReLU(negative_slope=0.3),
-            nn.ConvTranspose2d(200, 11, kernel_size=(3, 3)),
+            nn.ConvTranspose2d(100, 11, kernel_size=(3, 3)),
         )
 
         self.discriminator = nn.Sequential(
@@ -61,6 +61,9 @@ class AceNet(pl.LightningModule):
             # nn.Linear(1024, 1),
             nn.Sigmoid()
         )
+
+    def forward(self, x, y):
+        return self.Qz(self.Py(y)), self.Sz(self.Rx(x))
 
     def training_step(self, test_batch, batch_idx, optimizer_idx):
         x, y, prior_info = test_batch
