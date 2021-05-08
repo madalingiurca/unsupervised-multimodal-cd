@@ -4,7 +4,6 @@ import torch
 from matplotlib import pyplot as plt
 from patchify import unpatchify
 from skimage.filters import threshold_otsu
-from sklearn.cluster import KMeans
 from tqdm import tqdm
 
 from src.neuralNetwork.ace_net import AceNet
@@ -13,7 +12,8 @@ from src.utils.CaliforniaFloodDataModule import CaliforniaFloodDataModule
 if __name__ == '__main__':
 
     model = AceNet()
-    model = model.load_from_checkpoint(r"checkpoints/epoch=249-step=21999.ckpt")
+    model = model.load_from_checkpoint(
+        r"C:\Users\mgiur\PycharmProjects\UnsupervisedMultimodalCD\checkpoints\epoch=14-step=1319.ckpt")
     print(model)
     model.eval()
 
@@ -74,31 +74,45 @@ if __name__ == '__main__':
     # diff_image = np.reshape(diff_image, (3500, 2000))
     plt.figure(), plt.imshow(diff_image), plt.show()
 
-    AUC = sklearn.metrics.roc_auc_score(mask.ravel(), diff_image.ravel())
-
-
     # np.save('diff_image.npy', diff_image)
 
     # k-means clustering
-    k_m = KMeans(n_clusters=2, n_init=4)
-    k_m.fit(diff_image.reshape((-1, 1)))
+    # k_m = KMeans(n_clusters=2)
+    # k_m.fit(diff_image.reshape((-1, 1)))
     # Get the coordinates of the clusters centres as a 1D array
-    values = k_m.cluster_centers_.squeeze()
+    # values = k_m.cluster_centers_.squeeze()
     # Get the label of each point
-    labels = k_m.labels_
-    img_segm = np.choose(labels, values)
-    img_segm.shape = diff_image.shape
-    plt.imshow(img_segm, cmap='binary'), plt.show()
-
-    OA = sklearn.metrics.accuracy_score(mask.flatten(), img_segm.flatten())
-
-    img_segm.shape = diff_image.shape
-    img_segm = diff_image < 0.1
-    plt.figure(), plt.imshow(img_segm), plt.show()
+    # labels = k_m.labels_
+    # img_segm = np.choose(labels, values)
+    # img_segm.shape = diff_image.shape
+    # img_segm = img_segm < np.mean(img_segm)
+    # plt.imshow(img_segm, cmap='binary'), plt.show()
+    # OA = sklearn.metrics.accuracy_score(mask.flatten(), img_segm.flatten())
+    # print(f"Overall accuracy when k-means is used: {OA}")
 
     threshold = threshold_otsu(diff_image)
     img_segm = diff_image < threshold
+    plt.figure(), plt.imshow(img_segm, cmap='binary'), plt.show()
 
     OA = sklearn.metrics.accuracy_score(mask.flatten(), img_segm.flatten())
+    AUC = sklearn.metrics.roc_auc_score(mask.flatten(), diff_image.flatten())
+    AUPRC = sklearn.metrics.average_precision_score(mask.flatten(), diff_image.flatten())
 
-    plt.figure(), plt.imshow(img_segm, cmap='binary'), plt.show()
+    PREC_0 = sklearn.metrics.precision_score(mask.flatten(), img_segm.flatten(), pos_label=0)
+    PREC_1 = sklearn.metrics.precision_score(mask.flatten(), img_segm.flatten())
+    REC_0 = sklearn.metrics.recall_score(mask.flatten(), img_segm.flatten(), pos_label=0)
+    REC_1 = sklearn.metrics.recall_score(mask.flatten(), img_segm.flatten())
+    KC = sklearn.metrics.cohen_kappa_score(mask.flatten(), img_segm.flatten())
+    [[TN, FP], [FN, TP]] = sklearn.metrics.confusion_matrix(
+        mask.flatten(), img_segm.flatten()
+    )
+    print("MODEL METRICS:")
+    print(f"Overall accuracy when otsu is used: {OA}")
+    print(f"""
+    area under curve: {AUC}
+    precision 0, 1 = {PREC_0}, {PREC_1},
+    recall 0, 1 = {REC_0}, {REC_1},
+    kappa score = {KC},
+    TN, FP, FN, TP = {TN}, {FP}, {FN}, {TP},
+    average_precision_score = {AUPRC},
+    """)
