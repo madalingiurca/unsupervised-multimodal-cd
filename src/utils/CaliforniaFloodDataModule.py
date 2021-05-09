@@ -51,8 +51,6 @@ class CaliforniaFloodDataModule(LightningDataModule):
 
         self.testDataset = CaliforniaTestDataset(data)
 
-        return data
-
     def train_dataloader(self, *args, **kwargs) -> DataLoader:
         return DataLoader(self.trainDataset, batch_size=self.batch_size, shuffle=True)
 

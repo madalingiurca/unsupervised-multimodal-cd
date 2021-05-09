@@ -38,8 +38,7 @@ class XNet(pl.LightningModule):
             nn.Conv2d(20, 11, kernel_size=(3, 3), padding=(4, 4))
         )
 
-    def forward(self, input):
-        x, y = input
+    def forward(self, x, y):
         y_trans = self.Fx(x)
         x_trans = self.Gy(y)
 
