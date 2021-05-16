@@ -66,7 +66,6 @@ class XNet(pl.LightningModule):
         self.log("total loss", total_loss)
 
         return hp.W_HAT * prior_loss + hp.W_CYCLE * cycle_loss
-        # return hp.W_HAT * prior_loss
 
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), weight_decay=hp.W_REG)
