@@ -52,7 +52,7 @@ if __name__ == '__main__':
         if args.checkpoint is None:
             raise Exception("No model checkpoint provided.\n error: Argument -c/--checkpoint: expected one argument")
 
-        model.load_from_checkpoint(args.checkpoint)
+        model = model.load_from_checkpoint(args.checkpoint)
         model.eval()
         datamodule = CaliforniaFloodDataModule(patch_size=args.patch_size, window_step=args.patch_size, batch_size=1)
         datamodule.setup()
@@ -80,13 +80,13 @@ if __name__ == '__main__':
             diff_patch = (out_image_t1 + out_image_t2) / 2.0
 
             if step % 20 == 0 and args.verbose:
-                fig, axs = plt.subplots(3, 2, figsize=(5, 5))
+                fig, axs = plt.subplots(3, 2, figsize=(3,3))
                 axs[0, 0].set_title("t1")
                 axs[0, 0].imshow((x[:, :, [3, 2, 1]] + 1) / (x.max()))
                 axs[0, 1].set_title("t2")
                 axs[0, 1].imshow(y)
                 axs[1, 0].set_title("x_hat")
-                axs[1, 0].imshow((x_hat[:, :, [3, 2, 1]] + np.abs(x_hat.min())) / (x_hat.max()))
+                axs[1, 0].imshow((x_hat[:, :, [3, 2, 1]] + 1) / (x_hat.max()))
                 axs[1, 1].set_title("y_hat")
                 axs[1, 1].imshow(y_hat)
                 axs[2, 0].set_title("difference image")
@@ -103,9 +103,8 @@ if __name__ == '__main__':
             (ground_truth.shape[0] // args.patch_size, ground_truth.shape[1] // args.patch_size, args.patch_size,
              args.patch_size)), ground_truth.shape)
 
-        plt.figure(), plt.imshow(diff_image), plt.colorbar(), plt.show()
-        # diff_image[diff_image > np.mean(diff_image) + 3 * np.std(diff_image)] = np.mean(diff_image) + 3 * np.std(
-        #     diff_image)
+        diff_image[diff_image > np.mean(diff_image) + 3 * np.std(diff_image)] = np.mean(diff_image) + 3 * np.std(
+            diff_image)
         plt.figure(), plt.imshow(diff_image), plt.colorbar(), plt.show()
 
         threshold = threshold_otsu(diff_image)
