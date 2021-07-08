@@ -4,7 +4,6 @@ from skimage.util import view_as_windows
 import numpy as np
 import torch
 
-# import tensorflow as tf
 from torchvision.utils import save_image
 from tqdm import trange
 
@@ -36,17 +35,16 @@ def compute_affinity_matrix(batch_patches: torch.tensor) -> torch.tensor:
     _, h, w, c = batch_patches.shape
     x1: torch.tensor = batch_patches.reshape(-1, h * w, c).unsqueeze(1)
     x2: torch.tensor = batch_patches.reshape(-1, h * w, c).unsqueeze(2)
-    affinity_matrix = torch.linalg.norm(x2 - x1, dim=-1)
+    diff_image = torch.linalg.norm(x2 - x1, dim=-1)
 
-    kernel = torch.topk(affinity_matrix, h * w).values
+    kernel = torch.topk(diff_image, h * w).values
     kernel = torch.mean(kernel[:, :, (h * w) // 4], dim=1)
     kernel = torch.reshape(kernel, (-1, 1, 1))
-    affinity_matrix = torch.exp(-(torch.divide(affinity_matrix, kernel) ** 2))
+    affinity_matrix = torch.exp(-(torch.divide(diff_image, kernel) ** 2))
     return affinity_matrix
 
 
 def alpha_prior(x_batch, y_batch):
-    # TODO: alpha for overlapping patches
     ax = compute_affinity_matrix(x_batch)
     ay = compute_affinity_matrix(y_batch)
     ps = int(ax.shape[1] ** 0.5)

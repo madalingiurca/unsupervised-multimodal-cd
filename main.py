@@ -1,7 +1,9 @@
 import argparse
+import logging
 
 import numpy as np
 import torch
+import warnings
 from matplotlib import pyplot as plt
 from patchify import unpatchify
 from pytorch_lightning import Trainer
@@ -10,6 +12,7 @@ from scipy.io import loadmat
 from skimage.filters import threshold_otsu
 from sklearn import metrics
 from tqdm import tqdm
+from PIL import Image
 
 from src.neuralNetwork.ace_net import AceNet
 from src.neuralNetwork.x_net import XNet
@@ -73,9 +76,9 @@ if __name__ == '__main__':
             y = y.permute(0, 2, 3, 1)[0]
 
             # Compute 2nd norm of image diff and normalize
-            out_image_t1 = torch.sum((x - x_hat) ** 2, -1)
+            out_image_t1 = torch.sum((x - x_hat) ** 2, dim=-1)
             out_image_t1 = out_image_t1 / out_image_t1.max()
-            out_image_t2 = torch.sum((y - y_hat) ** 2, -1)
+            out_image_t2 = torch.sum((y - y_hat) ** 2, dim=-1)
             out_image_t2 = out_image_t2 / out_image_t2.max()
             diff_patch = (out_image_t1 + out_image_t2) / 2.0
 
@@ -105,11 +108,14 @@ if __name__ == '__main__':
 
         diff_image[diff_image > np.mean(diff_image) + 3 * np.std(diff_image)] = np.mean(diff_image) + 3 * np.std(
             diff_image)
+        Image.fromarray((diff_image * 255).astype(np.uint8)).save("full_diff.png", "PNG")
         plt.figure(), plt.imshow(diff_image), plt.colorbar(), plt.show()
 
         threshold = threshold_otsu(diff_image)
+        threshold += 0.65 * threshold
         img_segm = diff_image > threshold
         plt.figure(), plt.imshow(img_segm, cmap='binary'), plt.show()
+        Image.fromarray((img_segm * 255).astype(np.uint8)).save("full_diff_segm.png", "PNG")
         print("MODEL METRICS:")
         OA = metrics.accuracy_score(ground_truth.flatten(), img_segm.flatten())
         print(f"Overall accuracy when otsu is used: {OA}")
@@ -120,6 +126,7 @@ if __name__ == '__main__':
         PREC_1 = metrics.precision_score(ground_truth.flatten(), img_segm.flatten())
         REC_0 = metrics.recall_score(ground_truth.flatten(), img_segm.flatten(), pos_label=0)
         REC_1 = metrics.recall_score(ground_truth.flatten(), img_segm.flatten())
+        F1 = metrics.f1_score(ground_truth.flatten(), img_segm.flatten())
         KC = metrics.cohen_kappa_score(ground_truth.flatten(), img_segm.flatten())
         [[TN, FP], [FN, TP]] = metrics.confusion_matrix(
             ground_truth.flatten(), img_segm.flatten()
@@ -129,6 +136,7 @@ if __name__ == '__main__':
             precision 0, 1 = {PREC_0}, {PREC_1},
             recall 0, 1 = {REC_0}, {REC_1},
             kappa score = {KC},
+            F1 score = {F1},
             TN, FP, FN, TP = {TN}, {FP}, {FN}, {TP},
             average_precision_score = {AUPRC},
             """)

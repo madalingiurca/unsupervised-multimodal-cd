@@ -58,7 +58,6 @@ class AceNet(pl.LightningModule):
             nn.Conv2d(32, 16, kernel_size=(3, 3)),
             nn.Flatten(),
             nn.Linear(123904, 1),
-            # nn.Linear(1024, 1),
             nn.Sigmoid()
         )
 
@@ -74,6 +73,7 @@ class AceNet(pl.LightningModule):
 
         opt_encoders_decoders.zero_grad()
 
+        # X data flow
         y_hat = self.Sz(self.Rx(x))
         x_translation_loss = self.mse_loss_weighted(y, y_hat, 1 - prior_info)
         x_cycled = self.Qz(self.Py(y_hat))
